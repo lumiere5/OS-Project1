@@ -50,7 +50,6 @@ int main(int argc, char* argv[]) {
 			p = buffer + offset;
 
 			if (!fork()) {
-				xargvs[count] = 0;
 				exit(exec(argv[1], xargvs));
 			}
 
