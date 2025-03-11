@@ -27,37 +27,48 @@ int main(int argc, char* argv[]) {
 	char c;
 	int offset = 0;
 	char* p = buffer;
-	int blanks = 0;
 
 	while (read(0, &c, 1) > 0) {
-		if (c == ' ' || c == '\t') {
-			blanks++;
-			continue;
-		}
-
-		if (blanks) {
-			buffer[offset++] = 0;
-			xargvs[count++] = p;
-			p = buffer + offset;
-			blanks = 0;
-		}
-
-		if (c != '\n') {
-			buffer[offset++] = c;
-		}
-		else {
-			xargvs[count++] = p;
-			p = buffer + offset;
-
-			if (!fork()) {
-				exit(exec(argv[1], xargvs));
+		if (c == ' ' || c == '\t' || c == '\n') {
+			if (offset > 0) {
+				buffer[offset++] = 0;
+				xargvs[count++] = p;
+				p = buffer + offset;
 			}
 
-			wait(0);
+			if (c == '\n') {
+				xargvs[count] = 0;
 
-			count = argc - 1;
+				if (!fork()) {
+					exec(argv[1], xargvs);
+					fprintf(2, "xargs: exec %s failed\n", argv[1]);
+					exit(1);
+				}
+
+				wait(0);
+				count = argc - 1;
+				p = buffer;
+				offset = 0;
+			}
+			continue;
 		}
+		
+		buffer[offset++] = c;
 	}
 
-	exit(0);
+	if (offset > 0) {
+		buffer[offset++] = 0;
+		xargvs[count++] = p;
+		xargvs[count] = 0;
+
+		if (fork() == 0) {
+			exec(argv[1], xargvs);
+			fprintf(2, "xargs: exec %s failed\n", argv[1]);
+			exit(1);
+		}
+
+		wait(0);
+	}
+
+    exit(0);
 }
